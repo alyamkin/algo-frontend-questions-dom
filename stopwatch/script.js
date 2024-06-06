@@ -1,3 +1,4 @@
+const FRAME_INTERVAL_MS = 1000 / 60;
 const startButton = document.getElementById('start-button');
 const stopButton = document.getElementById('stop-button');
 const resetButton = document.getElementById('reset-button');
@@ -5,7 +6,9 @@ const timer = document.getElementById('timer');
 
 let elapsedTime = 0;
 let stopTime = 0;
-let intervalTimer = null;
+let startTime = 0;
+let intervalID;
+let frameID;
 
 // 00:00:000
 function formatTime({ minutes, seconds, milliseconds }) {
@@ -16,17 +19,11 @@ function formatTime({ minutes, seconds, milliseconds }) {
 }
 
 function extractTimeComponents(elapsedTime) {
-  const minutes = Math.floor(elapsedTime / 60000);
-  const seconds = Math.floor((elapsedTime % 60000) / 1000);
   const milliseconds = elapsedTime % 1000;
-
+  const seconds = Math.floor((elapsedTime / 1000) % 60);
+  const minutes = Math.floor((elapsedTime / (60 * 1000)) % 60);
+  console.log(milliseconds);
   return { minutes, seconds, milliseconds };
-}
-
-function renderTime(elapsedTime) {
-  const extractedTimeComponents = extractTimeComponents(elapsedTime);
-  const formattedTime = formatTime(extractedTimeComponents);
-  timer.innerText = formattedTime;
 }
 
 function setDisabledState(
@@ -39,34 +36,42 @@ function setDisabledState(
   resetButton.disabled = resetDisabled;
 }
 
-function startWatch() {
-  const startTime = Date.now();
-  setDisabledState(true, false, true);
-  intervalTimer = setInterval(() => {
-    elapsedTime = stopTime + Date.now() - startTime;
-    renderTime(elapsedTime);
-  }, 1);
+function updateTimer() {
+  elapsedTime = Date.now() - startTime + stopTime;
+  const extractedTimeComponents = extractTimeComponents(elapsedTime);
+  const formattedTime = formatTime(extractedTimeComponents);
+  timer.innerText = formattedTime;
+  frameID = requestAnimationFrame(updateTimer);
 }
 
-function stopWatch() {
+function startTimer() {
+  setDisabledState(true, false, true);
+  startTime = Date.now();
+  // intervalTimer = setInterval(updateTimer, FRAME_INTERVAL_MS);
+  frameID = requestAnimationFrame(updateTimer);
+}
+
+function stopTimer() {
   setDisabledState(false, true, false);
-  clearInterval(intervalTimer);
+  // clearInterval(intervalID);
+  cancelAnimationFrame(frameID);
   stopTime = elapsedTime;
 }
 
-function resetWatch() {
+function resetTimer() {
+  setDisabledState(false, true, true);
   elapsedTime = 0;
   stopTime = 0;
-  clearInterval(intervalTimer);
-  renderTime(0);
-  setDisabledState(false, true, true);
+  // clearInterval(intervalID);
+  cancelAnimationFrame(frameID);
+  timer.innerText = '00:00:000';
 }
 
 function init() {
   setDisabledState(false, true, true);
-  startButton.addEventListener('click', startWatch);
-  stopButton.addEventListener('click', stopWatch);
-  resetButton.addEventListener('click', resetWatch);
+  startButton.addEventListener('click', startTimer);
+  stopButton.addEventListener('click', stopTimer);
+  resetButton.addEventListener('click', resetTimer);
 }
 
 init();
